@@ -1,1 +1,3 @@
-# PICmicro_LED_POV_Display
+# PICmicro LED POV Display
+
+## Using MPLAB
