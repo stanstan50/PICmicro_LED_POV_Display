@@ -16,8 +16,8 @@ Init
     MOVWF   TRISB	    ; SET RB0...7 to OUTPUT (LED output)
     BCF	    STATUS, RP0	    ; SELECT BANK0
     
-    
-    goto    Init    ; Temporary idle program
+Idle
+    goto    Idle    ; Temporary idle program
 
 
 Delay_ms
