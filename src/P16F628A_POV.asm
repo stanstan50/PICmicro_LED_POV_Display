@@ -2,8 +2,21 @@
     include "p16f628a.inc"
 __CONFIG _INTOSC_OSC_CLKOUT & _CP_OFF & _PWRTE_ON & _WDT_OFF
     
-    cblock  0x20
+M_1s MACRO
+    MOVLW   .250
+    call    Delay_ms
+    MOVLW   .250
+    call    Delay_ms
+    MOVLW   .250
+    call    Delay_ms
+    MOVLW   .250
+    call    Delay_ms
+ENDM
 
+    
+    cblock  0x20
+TEMPDLY	; used in instruction delay (Delay_ms)
+TMPDLY1 ; used in instruction delay (Delay_ms)
     endc
     
     org 0
@@ -17,7 +30,21 @@ Init
     BCF	    STATUS, RP0	    ; SELECT BANK0
     
 Idle
-    goto    Idle    ; Temporary idle program
+    M_1s
+    M_1s
+    M_1s
+    M_1s
+    
+    BSF	    PORTB, 0
+    
+    M_1s
+    M_1s
+    M_1s
+    M_1s
+    
+    BCF	    PORTB, 0
+    
+    goto    Init    ; Temporary idle program
 
 
 Delay_ms
