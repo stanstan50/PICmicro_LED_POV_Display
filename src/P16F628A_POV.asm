@@ -1,8 +1,11 @@
+; RA0 - Tilt Switch In
+; RA1..3 -
+; RB0..7 - Output LEDs
+    
     list	p=16F628A
     include "p16f628a.inc"
-__CONFIG _INTOSC_OSC_CLKOUT & _CP_OFF & _PWRTE_ON & _WDT_OFF
-    
-M_1s MACRO
+__CONFIG _ER_OSC_CLKOUT & _CP_OFF & _PWRTE_ON & _WDT_OFF
+ M_1s MACRO
     MOVLW   .250
     call    Delay_ms
     MOVLW   .250
@@ -17,6 +20,7 @@ ENDM
     cblock  0x20
 TEMPDLY	; used in instruction delay (Delay_ms)
 TMPDLY1 ; used in instruction delay (Delay_ms)
+INDEXCTR
     endc
     
     org 0
@@ -29,25 +33,54 @@ Init
     MOVWF   TRISB	    ; SET RB0...7 to OUTPUT (LED output)
     BCF	    STATUS, RP0	    ; SELECT BANK0
     
+    goto    MainProgram
+    
 Idle
     M_1s
-    M_1s
-    M_1s
-    M_1s
     
-    BSF	    PORTB, 0
-    
-    M_1s
-    M_1s
-    M_1s
-    M_1s
-    
-    BCF	    PORTB, 0
-    
-    goto    Init    ; Temporary idle program
+    BSF	    PORTB, 3
 
+    M_1s
+    
+    BCF	    PORTB, 3
+    
+    goto    Idle    ; Temporary idle program
+
+MainProgram
+    CLRW
+    CLRF    INDEXCTR
+    
+    
+LoopMessage
+    
+    BTFSC   PORTA, 0
+    call    TiltSwitchSet
+    
+    MOVFW   INDEXCTR
+    call    MessageTable    ; Get LED pattern form MessageTable
+    MOVWF   PORTB   ; Light up the LEDs
+
+    
+    ;call    GetSpeed	; get the speed value (in ms)
+    ; delay for 200mS
+    MOVLW   .20
+    call Delay_ms
+    
+    INCF    INDEXCTR	; increment index
+    MOVLW   .100	; index 100 is overflow
+    SUBWF   INDEXCTR, W	; Compare using subtraction
+    BTFSC   STATUS, Z	; Check if equal or not
+    CLRF    INDEXCTR	; Reset the index
+    
+    goto    LoopMessage
+
+    
+    
+    goto    MainProgram
 
 Delay_ms
+    ; PROGRAM MEMORY = 15
+    
     MOVWF   TEMPDLY
 Delay_1	; delay 1000 uS
     MOVLW   .99		;1
@@ -67,7 +100,12 @@ Delay
     goto    Delay_1	;2
     
     return		;2
-    
+
+TiltSwitchSet
+    CLRF    PORTB
+    BTFSC   PORTA, 0
+    goto    TiltSwitchSet
+    return
 
 MessageTable	
     ; Program Memory (Instruction Word): 1 + 20(5) = 101
