@@ -4,8 +4,8 @@
     
     list	p=16F628A
     include "p16f628a.inc"
-__CONFIG _ER_OSC_CLKOUT & _CP_OFF & _PWRTE_ON & _WDT_OFF
- M_1s MACRO
+__CONFIG _FOSC_INTOSCCLK & _WDTE_OFF & _PWRTE_OFF & _BOREN_ON & _LVP_OFF & _CPD_ON & _CP_OFF
+ M_DELAY1s MACRO
     MOVLW   .250
     call    Delay_ms
     MOVLW   .250
@@ -24,25 +24,36 @@ INDEXCTR
     endc
     
     org 0
+    
 Init
     ;CLRF    PORTA
-    CLRF    PORTB
+    ;CLRF    PORTB
+    MOVLW   0X07
+    MOVWF   CMCON
+    
     BSF	    STATUS, RP0	    ; SELECT BANK1
+    MOVLW   0x00
+    MOVWF   VRCON
+    
+    
     BSF	    TRISA,  0	    ; SET RA0 to INPUT
     MOVLW   0x00
     MOVWF   TRISB	    ; SET RB0...7 to OUTPUT (LED output)
     BCF	    STATUS, RP0	    ; SELECT BANK0
     
-    goto    MainProgram
+    goto    MainProgram	    ; comment out to enter idle loop
     
 Idle
-    M_1s
-    
-    BSF	    PORTB, 3
+    M_DELAY1s
+    MOVLW   0xFF
+    MOVWF   PORTB
 
-    M_1s
+    M_DELAY1s
+    MOVLW   0x00
+    MOVWF   PORTB
     
-    BCF	    PORTB, 3
+    BTFSC   PORTA, 0
+    call    TiltSwitchSet
     
     goto    Idle    ; Temporary idle program
 
@@ -61,13 +72,12 @@ LoopMessage
     MOVWF   PORTB   ; Light up the LEDs
 
     
-    ;call    GetSpeed	; get the speed value (in ms)
-    ; delay for 200mS
-    MOVLW   .20
-    call Delay_ms
+    call    GetDelay_ms	; get the delay value (in ms)
+    ; Value returned in WREG
+    call    Delay_ms
     
     INCF    INDEXCTR	; increment index
-    MOVLW   .100	; index 100 is overflow
+    MOVLW   .120	; index 120 is overflow
     SUBWF   INDEXCTR, W	; Compare using subtraction
     BTFSC   STATUS, Z	; Check if equal or not
     CLRF    INDEXCTR	; Reset the index
@@ -77,7 +87,206 @@ LoopMessage
     
     
     goto    MainProgram
+    
+GetDelay_ms
+    MOVLW   .10
+    
+    return
 
+TiltSwitchSet
+    CLRF    PORTB
+    BTFSC   PORTA, 0
+    goto    TiltSwitchSet
+    return
+
+MessageTable	
+    ; Program Memory (Instruction Word): 1 + 20(5) = 101 + 20 (char space) = 121
+    ; Instructions Cycles: 1 (ADDWF) + 2 (RETLW) = 3
+    ; Expected WREG Value: 0x00..0x63, or .0--.99
+    
+    ADDWF   PCL, F
+    
+; -- Comments shows the value of WREG --
+; P (0)*5
+    retlw b'11111110' ; 0 <-(0*5 + 0)
+    retlw b'00001001' ; 1 <-(0*5 + 1)
+    retlw b'00001001' ; 2 <-(0*5 + 2)
+    retlw b'00001001' ; 3 <-(0*5 + 3)
+    retlw b'00000110' ; 4 <-(0*5 + 4)
+    
+    retlw b'00000000'
+
+; L (1)*5
+    retlw b'11111111' ; 5 <-(1*5 + 0)
+    retlw b'10000000' ; 6 <-(1*5 + 1)
+    retlw b'10000000' ; 7 <-(1*5 + 2)
+    retlw b'10000000' ; 8 <-(1*5 + 3)
+    retlw b'10000000' ; 9 <-(1*5 + 4)
+    
+    retlw b'00000000'
+
+; E (2)*5
+    retlw b'11111111' ; 10 <-(2*5 + 0)
+    retlw b'10001001' ; 11 <-(2*5 + 1)
+    retlw b'10001001' ; 12 <-(2*5 + 2)
+    retlw b'10001001' ; 13 <-(2*5 + 3)
+    retlw b'10000001' ; 14 <-(2*5 + 4)
+    
+    retlw b'00000000'
+
+; A (3)*5
+    retlw b'11111110' ; 15 <-(3*5 + 0)
+    retlw b'00001001' ; 16 <-(3*5 + 1)
+    retlw b'00001001' ; 17 <-(3*5 + 2)
+    retlw b'00001001' ; 18 <-(3*5 + 3)
+    retlw b'11111110' ; 19 <-(3*5 + 4)
+    
+    retlw b'00000000'
+
+; S (4)*5
+    retlw b'10000110' ; 20 <-(4*5 + 0)
+    retlw b'10001001' ; 21 <-(4*5 + 1)
+    retlw b'10001001' ; 22 <-(4*5 + 2)
+    retlw b'10001001' ; 23 <-(4*5 + 3)
+    retlw b'01110001' ; 24 <-(4*5 + 4)
+    
+    retlw b'00000000'
+
+; E (5)*5
+    retlw b'11111111' ; 25 <-(5*5 + 0)
+    retlw b'10001001' ; 26 <-(5*5 + 1)
+    retlw b'10001001' ; 27 <-(5*5 + 2)
+    retlw b'10001001' ; 28 <-(5*5 + 3)
+    retlw b'10000001' ; 29 <-(5*5 + 4)
+
+    retlw b'00000000'
+    
+; SPACE (6)*5
+    retlw b'00000000' ; 30 <-(6*5 + 0)
+    retlw b'00000000' ; 31 <-(6*5 + 1)
+    retlw b'00000000' ; 32 <-(6*5 + 2)
+    retlw b'00000000' ; 33 <-(6*5 + 3)
+    retlw b'00000000' ; 34 <-(6*5 + 4)
+    
+    retlw b'00000000'
+
+; M (7)*5
+    retlw b'11111111' ; 35 <-(7*5 + 0)
+    retlw b'00000100' ; 36 <-(7*5 + 1)
+    retlw b'00011000' ; 37 <-(7*5 + 2)
+    retlw b'00000100' ; 38 <-(7*5 + 3)
+    retlw b'11111111' ; 39 <-(7*5 + 4)
+    
+    retlw b'00000000'
+
+; A (8)*5
+    retlw b'11111110' ; 40 <-(8*5 + 0)
+    retlw b'00001001' ; 41 <-(8*5 + 1)
+    retlw b'00001001' ; 42 <-(8*5 + 2)
+    retlw b'00001001' ; 43 <-(8*5 + 3)
+    retlw b'11111110' ; 44 <-(8*5 + 4)
+    
+    retlw b'00000000'
+
+; K (9)*5
+    retlw b'11111111' ; 45 <-(9*5 + 0)
+    retlw b'00001000' ; 46 <-(9*5 + 1)
+    retlw b'00010100' ; 47 <-(9*5 + 2)
+    retlw b'00100010' ; 48 <-(9*5 + 3)
+    retlw b'11000001' ; 49 <-(9*5 + 4)
+    
+    retlw b'00000000'
+
+; E (10)*5
+    retlw b'11111111' ; 50 <-(10*5 + 0)
+    retlw b'10001001' ; 51 <-(10*5 + 1)
+    retlw b'10001001' ; 52 <-(10*5 + 2)
+    retlw b'10001001' ; 53 <-(10*5 + 3)
+    retlw b'10000001' ; 54 <-(10*5 + 4)
+    
+    retlw b'00000000'
+
+; SPACE (11)*5
+    retlw b'00000000' ; 55 <-(11*5 + 0)
+    retlw b'00000000' ; 56 <-(11*5 + 1)
+    retlw b'00000000' ; 57 <-(11*5 + 2)
+    retlw b'00000000' ; 58 <-(11*5 + 3)
+    retlw b'00000000' ; 59 <-(11*5 + 4)
+    
+    retlw b'00000000'
+
+; U (12)*5
+    retlw b'01111111' ; 60 <-(12*5 + 0)
+    retlw b'10000000' ; 61 <-(12*5 + 1)
+    retlw b'10000000' ; 62 <-(12*5 + 2)
+    retlw b'10000000' ; 63 <-(12*5 + 3)
+    retlw b'01111111' ; 64 <-(12*5 + 4)
+    
+    retlw b'00000000'
+
+; S (13)*5
+    retlw b'10000110' ; 65 <-(13*5 + 0)
+    retlw b'10001001' ; 66 <-(13*5 + 1)
+    retlw b'10001001' ; 67 <-(13*5 + 2)
+    retlw b'10001001' ; 68 <-(13*5 + 3)
+    retlw b'01110001' ; 69 <-(13*5 + 4)
+    
+    retlw b'00000000'
+
+; SPACE (14)*5
+    retlw b'00000000' ; 70 <-(14*5 + 0)
+    retlw b'00000000' ; 71 <-(14*5 + 1)
+    retlw b'00000000' ; 72 <-(14*5 + 2)
+    retlw b'00000000' ; 73 <-(14*5 + 3)
+    retlw b'00000000' ; 74 <-(14*5 + 4)
+    
+    retlw b'00000000'
+
+; P (15)*5
+    retlw b'11111110' ; 75 <-(15*5 + 0)
+    retlw b'00001001' ; 76 <-(15*5 + 1)
+    retlw b'00001001' ; 77 <-(15*5 + 2)
+    retlw b'00001001' ; 78 <-(15*5 + 3)
+    retlw b'00000110' ; 79 <-(15*5 + 4)
+    
+    retlw b'00000000'
+
+; A (16)*5
+    retlw b'11111110' ; 80 <-(16*5 + 0)
+    retlw b'00001001' ; 81 <-(16*5 + 1)
+    retlw b'00001001' ; 82 <-(16*5 + 2)
+    retlw b'00001001' ; 83 <-(16*5 + 3)
+    retlw b'11111110' ; 84 <-(16*5 + 4)
+    
+    retlw b'00000000'
+
+; S (17)*5
+    retlw b'10000110' ; 85 <-(17*5 + 0)
+    retlw b'10001001' ; 86 <-(17*5 + 1)
+    retlw b'10001001' ; 87 <-(17*5 + 2)
+    retlw b'10001001' ; 88 <-(17*5 + 3)
+    retlw b'01110001' ; 89 <-(17*5 + 4)
+    
+    retlw b'00000000'
+
+; S (18)*5
+    retlw b'10000110' ; 90 <-(18*5 + 0)
+    retlw b'10001001' ; 91 <-(18*5 + 1)
+    retlw b'10001001' ; 92 <-(18*5 + 2)
+    retlw b'10001001' ; 93 <-(18*5 + 3)
+    retlw b'01110001' ; 94 <-(18*5 + 4)
+    
+    retlw b'00000000'
+
+; ! (19)*5
+    retlw b'00000000' ; 95 <-(19*5 + 0)
+    retlw b'00000000' ; 96 <-(19*5 + 1)
+    retlw b'10111111' ; 97 <-(19*5 + 2)
+    retlw b'00000000' ; 98 <-(19*5 + 3)
+    retlw b'00000000' ; 99 <-(19*5 + 4)
+    
+    retlw b'00000000'
+    
 Delay_ms
     ; PROGRAM MEMORY = 15
     
@@ -100,159 +309,5 @@ Delay
     goto    Delay_1	;2
     
     return		;2
-
-TiltSwitchSet
-    CLRF    PORTB
-    BTFSC   PORTA, 0
-    goto    TiltSwitchSet
-    return
-
-MessageTable	
-    ; Program Memory (Instruction Word): 1 + 20(5) = 101
-    ; Instructions Cycles: 1 (ADDWF) + 2 (RETLW) = 3
-    ; Expected WREG Value: 0x00..0x63, or .0--.99
-    
-    ADDWF   PCL, F
-    
-; -- Comments shows the value of WREG --
-; P (0)*5
-    retlw b'11111110' ; 0 <-(0*5 + 0)
-    retlw b'00001001' ; 1 <-(0*5 + 1)
-    retlw b'00001001' ; 2 <-(0*5 + 2)
-    retlw b'00001001' ; 3 <-(0*5 + 3)
-    retlw b'00000110' ; 4 <-(0*5 + 4)
-
-; L (1)*5
-    retlw b'11111111' ; 5 <-(1*5 + 0)
-    retlw b'10000000' ; 6 <-(1*5 + 1)
-    retlw b'10000000' ; 7 <-(1*5 + 2)
-    retlw b'10000000' ; 8 <-(1*5 + 3)
-    retlw b'10000000' ; 9 <-(1*5 + 4)
-
-; E (2)*5
-    retlw b'11111111' ; 10 <-(2*5 + 0)
-    retlw b'10001001' ; 11 <-(2*5 + 1)
-    retlw b'10001001' ; 12 <-(2*5 + 2)
-    retlw b'10001001' ; 13 <-(2*5 + 3)
-    retlw b'10000001' ; 14 <-(2*5 + 4)
-
-; A (3)*5
-    retlw b'11111110' ; 15 <-(3*5 + 0)
-    retlw b'00001001' ; 16 <-(3*5 + 1)
-    retlw b'00001001' ; 17 <-(3*5 + 2)
-    retlw b'00001001' ; 18 <-(3*5 + 3)
-    retlw b'11111110' ; 19 <-(3*5 + 4)
-
-; S (4)*5
-    retlw b'10000110' ; 20 <-(4*5 + 0)
-    retlw b'10001001' ; 21 <-(4*5 + 1)
-    retlw b'10001001' ; 22 <-(4*5 + 2)
-    retlw b'10001001' ; 23 <-(4*5 + 3)
-    retlw b'01110001' ; 24 <-(4*5 + 4)
-
-; E (5)*5
-    retlw b'11111111' ; 25 <-(5*5 + 0)
-    retlw b'10001001' ; 26 <-(5*5 + 1)
-    retlw b'10001001' ; 27 <-(5*5 + 2)
-    retlw b'10001001' ; 28 <-(5*5 + 3)
-    retlw b'10000001' ; 29 <-(5*5 + 4)
-
-; SPACE (6)*5
-    retlw b'00000000' ; 30 <-(6*5 + 0)
-    retlw b'00000000' ; 31 <-(6*5 + 1)
-    retlw b'00000000' ; 32 <-(6*5 + 2)
-    retlw b'00000000' ; 33 <-(6*5 + 3)
-    retlw b'00000000' ; 34 <-(6*5 + 4)
-
-; M (7)*5
-    retlw b'11111111' ; 35 <-(7*5 + 0)
-    retlw b'00000100' ; 36 <-(7*5 + 1)
-    retlw b'00011000' ; 37 <-(7*5 + 2)
-    retlw b'00000100' ; 38 <-(7*5 + 3)
-    retlw b'11111111' ; 39 <-(7*5 + 4)
-
-; A (8)*5
-    retlw b'11111110' ; 40 <-(8*5 + 0)
-    retlw b'00001001' ; 41 <-(8*5 + 1)
-    retlw b'00001001' ; 42 <-(8*5 + 2)
-    retlw b'00001001' ; 43 <-(8*5 + 3)
-    retlw b'11111110' ; 44 <-(8*5 + 4)
-
-; K (9)*5
-    retlw b'11111111' ; 45 <-(9*5 + 0)
-    retlw b'00001000' ; 46 <-(9*5 + 1)
-    retlw b'00010100' ; 47 <-(9*5 + 2)
-    retlw b'00100010' ; 48 <-(9*5 + 3)
-    retlw b'11000001' ; 49 <-(9*5 + 4)
-
-; E (10)*5
-    retlw b'11111111' ; 50 <-(10*5 + 0)
-    retlw b'10001001' ; 51 <-(10*5 + 1)
-    retlw b'10001001' ; 52 <-(10*5 + 2)
-    retlw b'10001001' ; 53 <-(10*5 + 3)
-    retlw b'10000001' ; 54 <-(10*5 + 4)
-
-; SPACE (11)*5
-    retlw b'00000000' ; 55 <-(11*5 + 0)
-    retlw b'00000000' ; 56 <-(11*5 + 1)
-    retlw b'00000000' ; 57 <-(11*5 + 2)
-    retlw b'00000000' ; 58 <-(11*5 + 3)
-    retlw b'00000000' ; 59 <-(11*5 + 4)
-
-; U (12)*5
-    retlw b'01111111' ; 60 <-(12*5 + 0)
-    retlw b'10000000' ; 61 <-(12*5 + 1)
-    retlw b'10000000' ; 62 <-(12*5 + 2)
-    retlw b'10000000' ; 63 <-(12*5 + 3)
-    retlw b'01111111' ; 64 <-(12*5 + 4)
-
-; S (13)*5
-    retlw b'10000110' ; 65 <-(13*5 + 0)
-    retlw b'10001001' ; 66 <-(13*5 + 1)
-    retlw b'10001001' ; 67 <-(13*5 + 2)
-    retlw b'10001001' ; 68 <-(13*5 + 3)
-    retlw b'01110001' ; 69 <-(13*5 + 4)
-
-; SPACE (14)*5
-    retlw b'00000000' ; 70 <-(14*5 + 0)
-    retlw b'00000000' ; 71 <-(14*5 + 1)
-    retlw b'00000000' ; 72 <-(14*5 + 2)
-    retlw b'00000000' ; 73 <-(14*5 + 3)
-    retlw b'00000000' ; 74 <-(14*5 + 4)
-
-; P (15)*5
-    retlw b'11111110' ; 75 <-(15*5 + 0)
-    retlw b'00001001' ; 76 <-(15*5 + 1)
-    retlw b'00001001' ; 77 <-(15*5 + 2)
-    retlw b'00001001' ; 78 <-(15*5 + 3)
-    retlw b'00000110' ; 79 <-(15*5 + 4)
-
-; A (16)*5
-    retlw b'11111110' ; 80 <-(16*5 + 0)
-    retlw b'00001001' ; 81 <-(16*5 + 1)
-    retlw b'00001001' ; 82 <-(16*5 + 2)
-    retlw b'00001001' ; 83 <-(16*5 + 3)
-    retlw b'11111110' ; 84 <-(16*5 + 4)
-
-; S (17)*5
-    retlw b'10000110' ; 85 <-(17*5 + 0)
-    retlw b'10001001' ; 86 <-(17*5 + 1)
-    retlw b'10001001' ; 87 <-(17*5 + 2)
-    retlw b'10001001' ; 88 <-(17*5 + 3)
-    retlw b'01110001' ; 89 <-(17*5 + 4)
-
-; S (18)*5
-    retlw b'10000110' ; 90 <-(18*5 + 0)
-    retlw b'10001001' ; 91 <-(18*5 + 1)
-    retlw b'10001001' ; 92 <-(18*5 + 2)
-    retlw b'10001001' ; 93 <-(18*5 + 3)
-    retlw b'01110001' ; 94 <-(18*5 + 4)
-
-; ! (19)*5
-    retlw b'00000000' ; 95 <-(19*5 + 0)
-    retlw b'00000000' ; 96 <-(19*5 + 1)
-    retlw b'10111111' ; 97 <-(19*5 + 2)
-    retlw b'00000000' ; 98 <-(19*5 + 3)
-    retlw b'00000000' ; 99 <-(19*5 + 4)
 
     end
