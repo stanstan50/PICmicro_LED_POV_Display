@@ -2,6 +2,14 @@
 ; RA1..3 -
 ; RB0..7 - Output LEDs
     
+; Assume 0.5cm physcal space between columns (at 1 MHz instruction cycle)
+; at 0.5 m/s -> 10 ms delay -> 10000 instruction delay
+; at 0.25 m/s -> 20 ms delay -> 20000 instruction delay
+; at 0.8 m/s -> 6.25 ms delay -> 6250 instruction delay
+
+; delay range
+; 6.25 ms -- 20 ms
+    
     list	p=16F628A
     include "p16f628a.inc"
 __CONFIG _FOSC_INTOSCCLK & _WDTE_OFF & _PWRTE_OFF & _BOREN_ON & _LVP_OFF & _CPD_ON & _CP_OFF
@@ -23,23 +31,43 @@ TMPDLY1 ; used in instruction delay (Delay_ms)
 INDEXCTR
     endc
     
-    org 0
+    org 0x0
+    goto    Init
     
+    org 0x4	; Interrupt Vector
+    
+    
+    org 0x20
 Init
     ;CLRF    PORTA
     ;CLRF    PORTB
+    ; Disable Comparators (Bank 0)
     MOVLW   0X07
     MOVWF   CMCON
     
-    BSF	    STATUS, RP0	    ; SELECT BANK1
+;    ; Enable Timer1 (Bank 0)
+;    MOVLW   b'00110001'
+;    MOVWF   T1CON
+;    
+;    ; Clear Timer1 registers (Bank 0)
+;    CLRF    TMR1H
+;    CLRF    TMR1L
+    
+    
+    
+    ; SELECT BANK1
+    BSF	    STATUS, RP0	    
+    
+    ; Disable VREF (Bank 1)
     MOVLW   0x00
-    MOVWF   VRCON
+    MOVWF   VRCON	    
     
-    
+    ; Set I/O Direction (Bank 1)
     BSF	    TRISA,  0	    ; SET RA0 to INPUT
-    MOVLW   0x00
-    MOVWF   TRISB	    ; SET RB0...7 to OUTPUT (LED output)
-    BCF	    STATUS, RP0	    ; SELECT BANK0
+    CLRF    TRISB	    ; SET RB0...7 to OUTPUT (LED output)
+    
+    ; SELECT BANK0
+    BCF	    STATUS, RP0
     
     goto    MainProgram	    ; comment out to enter idle loop
     
@@ -307,6 +335,18 @@ Delay
     
     DECFSZ  TEMPDLY, F	;1 or 2
     goto    Delay_1	;2
+    
+    return		;2
+    
+Delay_10us
+    ; Delays [WREG] * 10us or [WREG] * 10 instruction delays
+    ; + 1 (+3 more including the call and movlw)
+    goto    $+1		;2
+    goto    $+1		;2
+    goto    $+1		;2
+    nop			;1
+    DECFSZ  W, W	;1 or 2
+    goto    Delay_10us	;2
     
     return		;2
 
