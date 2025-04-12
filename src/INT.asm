@@ -100,11 +100,16 @@ Init
     ;goto    MainProgram	    ; comment out to enter idle loop
     
 Idle
-    M_DELAY1s
+    
+    MOVFW   DELAYVAL
+    call    Delay_ms
+    
     MOVLW   0xFF
     MOVWF   PORTB
 
-    M_DELAY1s
+    MOVFW   DELAYVAL
+    call    Delay_ms
+    
     MOVLW   0x00
     MOVWF   PORTB
     
