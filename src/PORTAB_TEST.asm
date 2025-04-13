@@ -32,6 +32,7 @@ ENDM
 TEMPDLY	; used in instruction delay (Delay_ms)
 TMPDLY1 ; used in instruction delay (Delay_ms)
 INDEXCTR
+TEMP
     endc
     
     org 0x0
@@ -84,7 +85,8 @@ Idle
     MOVLW   0xFF
     MOVWF   PORTB
     ANDLW   0x0F
-    RLF	    W, W
+    MOVWF   TEMP    ; Copy WREG to TEMP
+    RLF	    TEMP, W
     MOVWF   PORTA
     
 
@@ -93,11 +95,12 @@ Idle
     MOVLW   0x00
     MOVWF   PORTB
     ANDLW   0x0F
-    RLF	    W, W
+    MOVWF   TEMP    ; Copy WREG to TEMP
+    RLF	    TEMP, W
     MOVWF   PORTA
     
-    BTFSC   PORTA, 0
-    call    TiltSwitchSet
+    ;BTFSC   PORTA, 0
+    ;call    TiltSwitchSet
     
     goto    Idle    ; Temporary idle program
 
