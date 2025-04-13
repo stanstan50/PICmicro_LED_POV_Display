@@ -34,6 +34,8 @@ TMPDLY1 ; used in instruction delay (Delay_ms)
 INDEXCTR
 TEMP
 DELAYVAL_MS
+DELAYVAL_US
+INTWBUFFER
     endc
     
     org 0x0
@@ -44,7 +46,12 @@ ISR
     BTFSS   INTCON, INTF
     goto    ISR_Exit
     
+    MOVWF   INTWBUFFER
     call    SetDelay
+    MOVFW   INTWBUFFER
+    
+    CLRF    TMR1H
+    CLRF    TMR1L
     
     BCF	    INTCON, INTF     ; Clear interrupt flag
     
@@ -60,7 +67,7 @@ Init
     MOVWF   CMCON
     
     ; Enable Timer1 (Bank 0)
-    MOVLW   b'00110001'
+    MOVLW   b'00100001'
     MOVWF   T1CON
     
     ; Clear Timer1 registers (Bank 0)
@@ -90,7 +97,7 @@ Init
 	BCF     PIR1, TMR1IF	    ; Clear Timer1 Interrupt Flag
 
 	; Configure INT interrupt (RB0 / INT)
-	BCF     OPTION_REG, INTEDG   ; Interrupt on falling edge
+	BCF     OPTION_REG, INTEDG   ; Interrupt on falling edge (either side hits the magnet -> low)
 
 	; Enable interrupts
 	BSF     INTCON, INTE         ; Enable external INT interrupt (RB0/INT)
@@ -101,16 +108,18 @@ Init
     MOVWF   DELAYVAL_MS
     
     ; Initialize DELAYVAL_US (in us)
+    MOVLW   .10
+    MOVWF   DELAYVAL_US
     
 
-    goto    MainProgram	    ; comment out to enter idle loop
+    ;goto    MainProgram	    ; comment out to enter idle loop
     
 Idle
     M_DELAY1s
     
     MOVLW   0xFF
     MOVWF   PORTB   ; Light up bit4..7 on RB4..7
-    ANDLW   0x0F    ; Mask for bit0..3
+    ANDLW   0xFF    ; Mask for bit0..3
     MOVWF   TEMP    ; Copy WREG to TEMP
     RLF	    TEMP, W ; shift for RA1..4
     MOVWF   PORTA   ; Light up bit0..3 on RA1..4
@@ -150,9 +159,11 @@ LoopMessage
     MOVWF   PORTA	; Light up bit0..3 on RA1..4
 
     
-    call    GetDelay_ms	; get the delay value (in ms)
-    ; Value returned in WREG
-    call    Delay_ms
+;    call    GetDelay_ms	; get the delay value (in ms)
+;    ; Value returned in WREG
+;    call    Delay_ms
+    
+    call    Delay_Call
     
     INCF    INDEXCTR	; increment index
     MOVLW   .160	; index 160 is overflow
@@ -166,18 +177,42 @@ LoopMessage
     
     goto    MainProgram
     
+Delay_Call
+    MOVFW   DELAYVAL_US
+    call    Delay_4
+    
+    MOVFW   DELAYVAL_MS
+    call    Delay_ms
+    
+    return
     
 SetDelay
-    MOVLW   .250
-    MOVWF   DELAYVAL_MS   
+    MOVFW   TMR1L
+    MOVWF   TEMP
+    RRF	    TEMP, W
+    MOVWF   TEMP
+    RRF	    TEMP, W
+    MOVWF   TEMP
+    RRF	    TEMP, W
+    MOVWF   DELAYVAL_US
+    
+    MOVFW   TMR1H
+    MOVWF   TEMP
+    RRF	    TEMP, W
+    MOVWF   TEMP
+    RRF	    TEMP, W
+    MOVWF   TEMP
+    RRF	    TEMP, W
+    MOVWF   DELAYVAL_MS
     
     return
     
-GetDelay_ms
-    ; MOVLW   .10
-    MOVFW   DELAYVAL_MS
+Delay_4
+    nop			;1
+    DECFSZ  W, W	;1 or 2
+    goto    Delay_10us	;2
     
-    return
+    return		;2
 
 TiltSwitchSet
     CLRF    PORTA
@@ -195,7 +230,7 @@ MessageTable
     
     ADDWF   PCL, F
     
-; -- Comments shows the value of WREG --
+; -- Comments shows the value of WREG (**Outdated) --
 ; P (0)*5
     retlw b'11111110' ; 0 <-(0*5 + 0)
     retlw b'00001001' ; 1 <-(0*5 + 1)
@@ -420,22 +455,22 @@ Delay_ms
     ; PROGRAM MEMORY = 15
     
     MOVWF   TEMPDLY
-Delay_1	; delay 1000 uS
+Delay_100	; delay 1000 uS
     MOVLW   .99		;1
     MOVWF   TMPDLY1	;1
     goto    $+1		;2
     goto    $+1		;2
     nop			;1
-Delay
+Delay_10
     goto    $+1		;2
     goto    $+1		;2
     goto    $+1		;2
     nop			;1
     DECFSZ  TMPDLY1, F	;1 or 2
-    goto    Delay	;2
+    goto    Delay_10	;2
     
     DECFSZ  TEMPDLY, F	;1 or 2
-    goto    Delay_1	;2
+    goto    Delay_100	;2
     
     return		;2
     
