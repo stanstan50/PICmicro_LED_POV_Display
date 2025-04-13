@@ -209,8 +209,8 @@ SetDelay
     return
     
 Delay_4
-    NOP		;1
-    DECFSZ  W, W	;1 or 2
+    MOVWF   DELAY4_BUFFER		;1
+    DECFSZ  DELAY4_BUFFER, W	;1 or 2
     goto    Delay_4		;2
     
     return			;2
@@ -472,18 +472,6 @@ Delay_10
     
     DECFSZ  TEMPDLY, F	;1 or 2
     goto    Delay_100	;2
-    
-    return		;2
-    
-Delay_10us
-    ; Delays [WREG] * 10us or [WREG] * 10 instruction delays
-    ; + 1 (+3 more including the call and movlw)
-    goto    $+1		;2
-    goto    $+1		;2
-    goto    $+1		;2
-    nop			;1
-    DECFSZ  W, W	;1 or 2
-    goto    Delay_10us	;2
     
     return		;2
 
