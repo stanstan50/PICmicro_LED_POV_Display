@@ -83,21 +83,21 @@ Idle
     M_DELAY1s
     
     MOVLW   0xFF
-    MOVWF   PORTB
-    ANDLW   0x0F
+    MOVWF   PORTB   ; Light up bit4..7 on RB4..7
+    ANDLW   0x0F    ; Mask for bit0..3
     MOVWF   TEMP    ; Copy WREG to TEMP
-    RLF	    TEMP, W
-    MOVWF   PORTA
+    RLF	    TEMP, W ; shift for RA1..4
+    MOVWF   PORTA   ; Light up bit0..3 on RA1..4
     
 
     M_DELAY1s
     
     MOVLW   0x00
-    MOVWF   PORTB
-    ANDLW   0x0F
+    MOVWF   PORTB   ; Light up bit4..7 on RB4..7
+    ANDLW   0x0F    ; Mask for bit0..3
     MOVWF   TEMP    ; Copy WREG to TEMP
-    RLF	    TEMP, W
-    MOVWF   PORTA
+    RLF	    TEMP, W ; shift for RA1..4
+    MOVWF   PORTA   ; Light up bit0..3 on RA1..4
     
     ;BTFSC   PORTA, 0
     ;call    TiltSwitchSet
@@ -111,12 +111,17 @@ MainProgram
     
 LoopMessage
     
-    BTFSC   PORTB, 1
-    call    TiltSwitchSet
+;    BTFSC   PORTA, 0
+;    call    TiltSwitchSet
     
     MOVFW   INDEXCTR
-    call    MessageTable    ; Get LED pattern form MessageTable
-    MOVWF   PORTA   ; Light up the LEDs
+    call    MessageTable    ; Get LED pattern form MessageTable -> WREG
+    ; Light up LEDs
+    MOVWF   PORTB	; Light up bit4..7 on RB4..7
+    ANDLW   0x0F	; Mask for bit0..3
+    MOVWF   TEMP	; Copy WREG to TEMP
+    RLF	    TEMP, W	; shift for RA1..4
+    MOVWF   PORTA	; Light up bit0..3 on RA1..4
 
     
     call    GetDelay_ms	; get the delay value (in ms)
@@ -142,8 +147,10 @@ GetDelay_ms
 
 TiltSwitchSet
     CLRF    PORTA
-    BTFSC   PORTB, 1
-    goto    TiltSwitchSet
+    CLRF    PORTB
+TiltSwitchSetLoop
+    BTFSC   PORTA, 0
+    goto    TiltSwitchSetLoop
     return
 
     
