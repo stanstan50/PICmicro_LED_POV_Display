@@ -157,7 +157,7 @@ LoopMessage
     ; Poll for Sensor
     
     
-    BTFSC   PORTB	; ignore when RB0 is 1
+    BTFSC   PORTB, 0	; ignore when RB0 is 1
     goto    EndPoll1
     
     BCF	    RSTATES, 0
