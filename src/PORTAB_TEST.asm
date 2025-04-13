@@ -77,7 +77,7 @@ Init
     
     ; Interrupts Setup
     
-    ; goto    MainProgram	    ; comment out to enter idle loop
+    goto    MainProgram	    ; comment out to enter idle loop
     
 Idle
     M_DELAY1s
@@ -99,8 +99,8 @@ Idle
     RLF	    TEMP, W ; shift for RA1..4
     MOVWF   PORTA   ; Light up bit0..3 on RA1..4
     
-    ;BTFSC   PORTA, 0
-    ;call    TiltSwitchSet
+    BTFSC   PORTA, 0
+    call    TiltSwitchSet
     
     goto    Idle    ; Temporary idle program
 
@@ -111,8 +111,8 @@ MainProgram
     
 LoopMessage
     
-;    BTFSC   PORTA, 0
-;    call    TiltSwitchSet
+    BTFSC   PORTA, 0
+    call    TiltSwitchSet
     
     MOVFW   INDEXCTR
     call    MessageTable    ; Get LED pattern form MessageTable -> WREG
