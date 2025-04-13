@@ -36,6 +36,7 @@ TEMP
 DELAYVAL_MS
 DELAYVAL_US
 INTWBUFFER
+DELAY4_BUFFER
     endc
     
     org 0x0
@@ -112,7 +113,7 @@ Init
     MOVWF   DELAYVAL_US
     
 
-    ;goto    MainProgram	    ; comment out to enter idle loop
+    goto    MainProgram	    ; comment out to enter idle loop
     
 Idle
     M_DELAY1s
@@ -208,11 +209,11 @@ SetDelay
     return
     
 Delay_4
-    nop			;1
+    NOP		;1
     DECFSZ  W, W	;1 or 2
-    goto    Delay_10us	;2
+    goto    Delay_4		;2
     
-    return		;2
+    return			;2
 
 TiltSwitchSet
     CLRF    PORTA
