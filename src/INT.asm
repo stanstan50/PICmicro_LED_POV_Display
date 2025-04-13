@@ -7,7 +7,7 @@
     list      p=16F628A
     #include <p16f628a.inc>
 
-    __CONFIG _INTRC_OSC_NOCLKOUT & _WDT_OFF & _PWRTE_ON & _MCLRE_OFF & _BOREN_OFF & _LVP_OFF & _CP_OFF
+    __CONFIG _FOSC_INTOSCCLK & _WDT_OFF & _PWRTE_ON & _BOREN_OFF & _LVP_OFF & _CP_OFF
     
     cblock 0x20
     TEMPDLY
