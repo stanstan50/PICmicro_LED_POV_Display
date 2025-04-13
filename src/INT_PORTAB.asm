@@ -33,6 +33,7 @@ TEMPDLY	; used in instruction delay (Delay_ms)
 TMPDLY1 ; used in instruction delay (Delay_ms)
 INDEXCTR
 TEMP
+DELAYVAL_MS
     endc
     
     org 0x0
@@ -167,13 +168,14 @@ LoopMessage
     
     
 SetDelay
-    MOVLW   .50
-    MOVFW   DELAYVAL_MS   
+    MOVLW   .250
+    MOVWF   DELAYVAL_MS   
     
     return
     
 GetDelay_ms
-    MOVLW   .10
+    ; MOVLW   .10
+    MOVFW   DELAYVAL_MS
     
     return
 
